@@ -4,7 +4,10 @@ import { db } from "../config/database.js";
 import { users } from "../db/schema.js";
 import { eq } from "drizzle-orm";
 
-export const registerUser = async (req: Request, res: Response): Promise<any> => {
+export const registerUser = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
   try {
     const { username, email, password, confirmPassword } = req.body;
 
@@ -67,5 +70,33 @@ export const registerUser = async (req: Request, res: Response): Promise<any> =>
 };
 
 export const loginUser = async (req: Request, res: Response): Promise<any> => {
-  res.send("Login user endpoint");
+  const { email, password } = req.body;
+  try {
+    const user = await db.query.users.findFirst({
+      where: eq(users.email, email),
+    });
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ message: "User not found please register first" });
+    }
+
+    const isPasswordValid = await bcryptjs.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: "Invalid Credentials" });
+    }
+
+    // if everything is valid send a success response
+
+    res.status(200).json({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+    });
+  } catch (error: any) {
+    console.log("Error in login controller", error.message);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
 };
